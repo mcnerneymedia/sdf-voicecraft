@@ -605,6 +605,104 @@
     setTimeout(() => toast.remove(), 2500);
   }
 
+  // --- Publish to Lore API Function ---
+  async function publishToLore(fileOrBlob, subfolder = "Content/Voices", metadata = {}) {
+    const filename = fileOrBlob.name || metadata.title || "voice_take.wav";
+    const path = `${subfolder}/${filename}`;
+    const formData = new FormData();
+    formData.append("path", path);
+    formData.append("client_id", clientId);
+    formData.append("file", fileOrBlob, filename);
+
+    const addRes = await fetch(`/api/lore/assets/add`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!addRes.ok) {
+      const errText = await addRes.text();
+      throw new Error(`Failed to stage asset in Lore: ${errText}`);
+    }
+
+    const commitRes = await fetch(`/api/lore/commit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `Add ${filename} from VoiceCraft Studio`,
+        author: userName
+      })
+    });
+
+    if (!commitRes.ok) {
+      const errText = await commitRes.text();
+      throw new Error(`Failed to commit asset in Lore: ${errText}`);
+    }
+
+    showToast(`📦 Published ${filename} to Lore`);
+    return { success: true, path, filename };
+  }
+
+  // --- Send to SoundCraft Studio via Collab Command ---
+  async function sendToSoundCraft(blob, filename, transcript, voiceName) {
+    // 1. First publish to Lore so SoundCraft has the physical asset in the repository
+    const pub = await publishToLore(blob, "Content/Voices", {
+      title: filename,
+      transcript: transcript,
+      voice: voiceName
+    });
+
+    // 2. Broadcast import_stem command to SoundCraft room (studio-soundcraft)
+    const assetUrl = `/api/lore/assets/download?path=${encodeURIComponent(pub.path)}`;
+    const cmdPayload = {
+      type: "command",
+      user_name: userName,
+      command: {
+        action: "import_stem",
+        payload: {
+          name: filename,
+          url: assetUrl,
+          track_name: "Audio 1: Dialogue",
+          sub_title: `VoiceCraft Kokoro (${voiceName})`
+        }
+      }
+    };
+
+    // Open connection to SoundCraft's collab channel to dispatch command
+    const scWsUrl = `${wsProtocol}//${hubHost}/ws/collab/studio-soundcraft/${clientId}-broadcaster`;
+    try {
+      const scWs = new WebSocket(scWsUrl);
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          scWs.close();
+          resolve(); // Resolve anyway so UI doesn't hang
+        }, 3000);
+
+        scWs.onopen = () => {
+          scWs.send(JSON.stringify(cmdPayload));
+          clearTimeout(timeout);
+          setTimeout(() => {
+            scWs.close();
+            resolve();
+          }, 500);
+        };
+        scWs.onerror = (e) => {
+          clearTimeout(timeout);
+          reject(e);
+        };
+      });
+    } catch (e) {
+      console.warn("Failed to dispatch command to SoundCraft channel directly:", e);
+    }
+
+    showToast(`🎵 Dispatched stem to SoundCraft dialogue track`);
+    return { success: true };
+  }
+
+  window.collabClient = {
+    publishToLore,
+    sendToSoundCraft
+  };
+
   connect();
 })();
 

@@ -225,9 +225,29 @@ btnDownload.onclick = () => {
   a.click();
 };
 
-btnSendSoundCraft.onclick = () => {
+btnSendSoundCraft.onclick = async () => {
   if (!currentBlob) return;
-  window.open('https://sdf-1alpha.tailc31025.ts.net:8087/', '_blank');
+  btnSendSoundCraft.disabled = true;
+  btnSendSoundCraft.textContent = 'Sending...';
+  try {
+    if (window.collabClient && window.collabClient.sendToSoundCraft) {
+      await window.collabClient.sendToSoundCraft(
+        currentBlob,
+        currentFilename,
+        scriptText.value,
+        voiceSelect.value
+      );
+      // Also open or focus SoundCraft in tab
+      window.open('https://sdf-1alpha.tailc31025.ts.net:8087/', '_blank');
+    } else {
+      window.open('https://sdf-1alpha.tailc31025.ts.net:8087/', '_blank');
+    }
+  } catch (e) {
+    alert('Failed to send stem to SoundCraft: ' + e);
+  } finally {
+    btnSendSoundCraft.disabled = false;
+    btnSendSoundCraft.textContent = '🎵 Send to SoundCraft';
+  }
 };
 
 btnPublishLore.onclick = async () => {
