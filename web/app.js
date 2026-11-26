@@ -26,7 +26,7 @@ speedSlider.oninput = () => {
 
 async function loadVoices() {
   try {
-    const resp = await fetch('https://sdf-1alpha.tailc31025.ts.net:8096/v1/audio/voices');
+    const resp = await fetch('/api/tts/voices');
     const data = await resp.json();
     const rawVoices = data.voices || [];
 
@@ -149,7 +149,7 @@ document.getElementById('btn-refresh-voices').onclick = loadVoices;
 async function previewVoice(voiceId) {
   try {
     outputStatus.textContent = `Generating preview for ${voiceId}...`;
-    const resp = await fetch('https://sdf-1alpha.tailc31025.ts.net:8096/v1/audio/speech', {
+    const resp = await fetch('/api/tts/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -178,7 +178,7 @@ btnSynthesize.onclick = async () => {
 
   try {
     const t0 = performance.now();
-    const resp = await fetch('https://sdf-1alpha.tailc31025.ts.net:8096/v1/audio/speech', {
+    const resp = await fetch('/api/tts/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
