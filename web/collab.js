@@ -19,7 +19,7 @@
   const hubPort = "8086";
   const hubHost = `${window.location.hostname}:${hubPort}`;
   const wsUrl = `${wsProtocol}//${hubHost}/ws/collab/${roomId}/${clientId}`;
-  const apiBase = `${apiProtocol}//${hubHost}`;
+  const apiBase = ""; // Use same-origin proxy routes
   const aiRegistryBase = `${apiProtocol}//${window.location.hostname}:8092`;
 
   let socket = null;
